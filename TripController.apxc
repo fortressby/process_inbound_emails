@@ -1,0 +1,29 @@
+public class TripController {
+
+    @AuraEnabled
+    public static List <Trip__c> getTrips() {
+        //Qyery 10 trips
+        List<Trip__c> tripList = [SELECT Id, Name, TripId__c, Account__r.Name from Trip__c LIMIT 10];
+        
+        
+        return tripList;
+    }
+    
+    @AuraEnabled
+    public static List <Case> getTripsByCaseId(Id caseId) {
+        
+        System.debug('get trips by case Id: ' + caseId);
+        
+        //Qyery 10 trips
+        List<Case> tripList = null;
+        
+        if(caseId != null) {
+            tripList = [SELECT Subject, Trip__r.Id, Trip__r.Name, Trip__r.TripId__c, Account.Name from Case WHERE Trip__r.Id != null AND Id =: caseId LIMIT 10];
+            System.debug('Size of trips found: ' + tripList.size());
+        } else {
+            tripList = [SELECT Trip__r.Id, Trip__r.Name, Trip__r.TripId__c, Account.Name from Case WHERE Trip__r.Id != null AND Id != null LIMIT 10];
+        }
+        
+        return tripList;
+    }
+}

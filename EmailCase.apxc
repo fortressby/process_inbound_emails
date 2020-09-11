@@ -1,0 +1,81 @@
+global class EmailCase implements Messaging.InboundEmailHandler {
+    
+    global Messaging.InboundEmailResult handleInboundEmail(Messaging.InboundEmail email, Messaging.InboundEnvelope envelope) {
+        
+        Messaging.InboundEmailResult result = new Messaging.InboundEmailresult();
+        
+        //get trip Id
+        String tripId = email.plainTextBody.substringBetween('[T#', ']');
+        
+        System.debug('####Trip Id' + tripId);
+        
+        Trip__c trip = null;
+        if(String.isNotBlank(tripId)) {
+            // get trip by id	
+            try {
+                
+            	trip = [SELECT Id, TripId__c, Account__c FROM Trip__c WHERE TripId__c =: tripId];
+                System.debug('####Trip was found!!! ' + tripId);
+                
+            } catch (System.QueryException e) {
+                trip = null;
+            }
+            
+            if(trip != null) {
+                
+            } else {
+                trip = new Trip__c();
+                trip.TripId__c = tripId;
+                
+                trip.Name = 'Trip ' + tripId;
+                insert trip;
+            }
+            
+            System.debug('####finding account by email: ' + email.fromAddress);
+            
+            Case emailCase = new Case();
+            for(Contact caseContact:[SELECT Id, Email, AccountId FROM Contact WHERE Email =: email.fromAddress LIMIT 1]){
+                
+                emailCase.ContactId = caseContact.Id;
+                emailCase.AccountId = caseContact.AccountId;
+                
+                if(caseContact.AccountId != trip.Account__c && trip.Account__c == null ) {
+                	trip.Account__c = caseContact.AccountId;    
+                }
+                
+                if(caseContact.AccountId != trip.Account__c && trip.Account__c != null) {
+                    
+                    System.debug('####trip found but related to another account: ' + tripId);
+                    
+                    //create new trip to relate to new account
+                    trip = new Trip__c();
+                	trip.TripId__c = tripId;
+                	trip.Account__c = caseContact.AccountId;    
+                	trip.Name = 'Trip ' + tripId;
+                	insert trip;
+                }
+                
+                System.debug('####Link Trip with account!! ' + caseContact.AccountId);
+                update trip;
+            }
+            emailCase.Status = 'New';
+            emailCase.Origin = 'Email';
+            emailCase.Priority = 'Medium';
+            emailCase.Type = 'Email';
+            emailCase.Subject = ' ' + email.subject;
+            
+            emailCase.trip__c = trip.Id;
+            
+            try {
+                insert emailCase;
+            } catch (System.DmlException e)
+            {
+                System.debug('ERROR: Not able to create Case: ' + e);
+            }
+        }
+        return result;
+        
+    } 
+    
+    
+}

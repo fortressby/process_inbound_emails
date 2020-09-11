@@ -1,0 +1,14 @@
+<aura:component controller="TripController">
+      
+    <aura:attribute type="Trip__c[]" name="tripList"/>
+    <aura:attribute name="mycolumns" type="List"/>
+    <aura:attribute name="caseId" type="String"/>
+      
+    <aura:handler name="init" value="{!this}" action="{!c.fetchTripsByCaseId}"/>
+      
+    <lightning:datatable data="{! v.tripList }"
+                         columns="{! v.mycolumns }"
+                         keyField="id"
+                         hideCheckboxColumn="true"/>
+      
+</aura:component>

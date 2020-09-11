@@ -1,0 +1,59 @@
+global class ProcessOpenCasesBatch implements Database.Batchable<sObject> {
+
+        global Database.QueryLocator start(Database.BatchableContext BC) {
+                 
+        String query = 'SELECT Id, Trip__r.Id, Trip__r.Name, Account.Id, Subject  FROM Case WHERE Status IN (\'New\', \'Open\')  AND Trip__r.Id != null';
+        return Database.getQueryLocator(query);
+    }
+    
+    
+     global void execute(Database.BatchableContext BC, List<Case> caseList) {
+        
+        for(Case openCase : caseList) {        
+            
+            //case 1 - acount is empty
+            if(openCase.AccountId == null) {
+            
+            	//find trip by Id
+            	System.debug('found case with emty account to update ' + openCase.Subject);
+                
+                
+                Trip__c trip = getTripById(openCase.Trip__r.Id);
+                if(trip != null) {
+                    openCase.AccountId = trip.Account__r.Id;    
+                }
+                
+            } else {
+                
+                Trip__c trip = getTripById(openCase.Trip__r.Id);
+                //case 2 if account not match against trip Id
+                if(trip != null  && openCase.AccountId != trip.Account__r.Id) {
+                    openCase.AccountId = trip.Account__r.Id;
+                }
+                
+            }
+        }
+        try {
+            // Update the Account Record
+            update caseList;
+         
+        } catch(Exception e) {
+            System.debug(e);
+        }
+         
+    }  
+    
+    global Trip__c getTripById(Id tripId) {
+        Trip__c trip = null;
+        List<Trip__c> tripList = [SELECT Id, TripId__c, Account__r.Id FROM Trip__c WHERE Id =: tripId LIMIT 1];
+        if(!tripList.isEmpty()) {
+            trip = tripList[0];    
+
+        }        
+        return trip;
+    }
+    
+    global void finish(Database.BatchableContext BC) {
+        
+    }
+}
